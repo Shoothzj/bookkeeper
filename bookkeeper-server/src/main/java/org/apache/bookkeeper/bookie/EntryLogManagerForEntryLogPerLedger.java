@@ -270,18 +270,17 @@ class EntryLogManagerForEntryLogPerLedger extends EntryLogManagerBase {
 
     EntryLogManagerForEntryLogPerLedger(ServerConfiguration conf, LedgerDirsManager ledgerDirsManager,
             EntryLoggerAllocator entryLoggerAllocator, List<EntryLogger.EntryLogListener> listeners,
-            EntryLogger.RecentEntryLogsStatus recentlyCreatedEntryLogsStatus, StatsLogger statsLogger)
-            throws IOException {
+            EntryLogger.RecentEntryLogsStatus recentlyCreatedEntryLogsStatus, StatsLogger statsLogger) {
         super(conf, ledgerDirsManager, entryLoggerAllocator, listeners);
         this.recentlyCreatedEntryLogsStatus = recentlyCreatedEntryLogsStatus;
-        this.rotatedLogChannels = new CopyOnWriteArrayList<BufferedLogChannel>();
-        this.replicaOfCurrentLogChannels = new ConcurrentLongHashMap<BufferedLogChannelWithDirInfo>();
+        this.rotatedLogChannels = new CopyOnWriteArrayList<>();
+        this.replicaOfCurrentLogChannels = new ConcurrentLongHashMap<>();
         this.entrylogMapAccessExpiryTimeInSeconds = conf.getEntrylogMapAccessExpiryTimeInSeconds();
         this.maximumNumberOfActiveEntryLogs = conf.getMaximumNumberOfActiveEntryLogs();
         this.entryLogPerLedgerCounterLimitsMultFactor = conf.getEntryLogPerLedgerCounterLimitsMultFactor();
 
         ledgerDirsManager.addLedgerDirsListener(getLedgerDirsListener());
-        this.lockArrayPool = new AtomicReferenceArray<Lock>(maximumNumberOfActiveEntryLogs * 2);
+        this.lockArrayPool = new AtomicReferenceArray<>(maximumNumberOfActiveEntryLogs * 2);
         this.entryLogAndLockTupleCacheLoader = new CacheLoader<Long, EntryLogAndLockTuple>() {
             @Override
             public EntryLogAndLockTuple load(Long key) throws Exception {

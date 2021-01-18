@@ -21,23 +21,28 @@
 
 package org.apache.bookkeeper.bookie;
 
-import static org.apache.bookkeeper.bookie.EntryLogger.UNASSIGNED_LEDGERID;
-
 import com.google.common.annotations.VisibleForTesting;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.util.concurrent.FastThreadLocal;
-import java.io.File;
-import java.io.IOException;
-import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.bookkeeper.bookie.EntryLogger.BufferedLogChannel;
 import org.apache.bookkeeper.bookie.EntryLogger.EntryLogListener;
 import org.apache.bookkeeper.bookie.LedgerDirsManager.NoWritableLedgerDirException;
 import org.apache.bookkeeper.conf.ServerConfiguration;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+
+import static org.apache.bookkeeper.bookie.EntryLogger.UNASSIGNED_LEDGERID;
+
 @Slf4j
 abstract class EntryLogManagerBase implements EntryLogManager {
+
+    /**
+     * allows children class to replace the rotatedLogChannels reference
+     */
     volatile List<BufferedLogChannel> rotatedLogChannels;
     final EntryLoggerAllocator entryLoggerAllocator;
     final LedgerDirsManager ledgerDirsManager;
@@ -103,16 +108,19 @@ abstract class EntryLogManagerBase implements EntryLogManager {
 
     abstract void setCurrentLogForLedgerAndAddToRotate(long ledgerId, BufferedLogChannel logChannel) throws IOException;
 
-    /*
+    /**
      * flush current logs.
+     * @throws IOException
      */
     abstract void flushCurrentLogs() throws IOException;
 
-    /*
+    /**
      * flush rotated logs.
+     * @throws IOException
      */
     abstract void flushRotatedLogs() throws IOException;
 
+    @VisibleForTesting
     List<BufferedLogChannel> getRotatedLogChannels() {
         return rotatedLogChannels;
     }

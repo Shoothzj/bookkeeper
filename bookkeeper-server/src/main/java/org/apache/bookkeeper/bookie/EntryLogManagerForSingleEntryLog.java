@@ -21,10 +21,13 @@
 
 package org.apache.bookkeeper.bookie;
 
-import static org.apache.bookkeeper.bookie.EntryLogger.INVALID_LID;
-import static org.apache.bookkeeper.bookie.EntryLogger.UNASSIGNED_LEDGERID;
-
 import io.netty.buffer.ByteBuf;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.bookkeeper.bookie.EntryLogger.BufferedLogChannel;
+import org.apache.bookkeeper.bookie.LedgerDirsManager.LedgerDirsListener;
+import org.apache.bookkeeper.conf.ServerConfiguration;
+import org.apache.bookkeeper.util.IOUtils;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
@@ -32,11 +35,9 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.bookkeeper.bookie.EntryLogger.BufferedLogChannel;
-import org.apache.bookkeeper.bookie.LedgerDirsManager.LedgerDirsListener;
-import org.apache.bookkeeper.conf.ServerConfiguration;
-import org.apache.bookkeeper.util.IOUtils;
+
+import static org.apache.bookkeeper.bookie.EntryLogger.INVALID_LID;
+import static org.apache.bookkeeper.bookie.EntryLogger.UNASSIGNED_LEDGERID;
 
 @Slf4j
 class EntryLogManagerForSingleEntryLog extends EntryLogManagerBase {
@@ -50,7 +51,7 @@ class EntryLogManagerForSingleEntryLog extends EntryLogManagerBase {
             EntryLoggerAllocator entryLoggerAllocator, List<EntryLogger.EntryLogListener> listeners,
             EntryLogger.RecentEntryLogsStatus recentlyCreatedEntryLogsStatus) {
         super(conf, ledgerDirsManager, entryLoggerAllocator, listeners);
-        this.rotatedLogChannels = new LinkedList<BufferedLogChannel>();
+        this.rotatedLogChannels = new LinkedList<>();
         this.recentlyCreatedEntryLogsStatus = recentlyCreatedEntryLogsStatus;
         // Register listener for disk full notifications.
         ledgerDirsManager.addLedgerDirsListener(getLedgerDirsListener());
@@ -165,7 +166,7 @@ class EntryLogManagerForSingleEntryLog extends EntryLogManagerBase {
     public void flushCurrentLogs() throws IOException {
         BufferedLogChannel currentActiveLogChannel = activeLogChannel;
         if (currentActiveLogChannel != null) {
-            /**
+            /*
              * flushCurrentLogs method is called during checkpoint, so
              * metadata of the file also should be force written.
              */
@@ -175,10 +176,10 @@ class EntryLogManagerForSingleEntryLog extends EntryLogManagerBase {
 
     @Override
     void flushRotatedLogs() throws IOException {
-        List<BufferedLogChannel> channels = null;
+        List<BufferedLogChannel> channels;
         synchronized (this) {
             channels = rotatedLogChannels;
-            rotatedLogChannels = new LinkedList<BufferedLogChannel>();
+            rotatedLogChannels = new LinkedList<>();
         }
         if (null == channels) {
             return;
@@ -228,7 +229,7 @@ class EntryLogManagerForSingleEntryLog extends EntryLogManagerBase {
     }
 
     @Override
-    public boolean commitEntryMemTableFlush() throws IOException {
+    public synchronized boolean commitEntryMemTableFlush() throws IOException {
         long logIdAfterFlush = getCurrentLogId();
         /*
          * in any case that an entry log reaches the limit, we roll the log
@@ -248,7 +249,7 @@ class EntryLogManagerForSingleEntryLog extends EntryLogManagerBase {
     }
 
     @Override
-    public void prepareSortedLedgerStorageCheckpoint(long numBytesFlushed) throws IOException{
+    public synchronized void prepareSortedLedgerStorageCheckpoint(long numBytesFlushed) throws IOException{
         if (numBytesFlushed > 0) {
             // if bytes are added between previous flush and this checkpoint,
             // it means bytes might live at current active entry log, we need
